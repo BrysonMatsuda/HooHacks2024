@@ -1,10 +1,12 @@
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
-from pydub import AudioSegment
 import speech_recognition as sr
 import io
 from threading import Lock
 import os
+import subprocess
+import wave
+import time
 
 app = Flask(__name__, template_folder='../public', static_folder='../static')
 socketio = SocketIO(app)
@@ -19,31 +21,40 @@ def handle_audio_chunk(chunk):
 
 @socketio.on('recording_stopped')
 def speech_to_text():
-    global audio_buffer
-    with buffer_lock:
-        audio_buffer.seek(0)
-        temp_file_path = "temp.wav"
-        with open(temp_file_path, "wb") as temp_file:
-            temp_file.write(audio_buffer.getvalue())
-        audio_buffer.seek(0)
-        audio_buffer.truncate()
-
+    temp_webm_path = "temp.webm"
+    temp_wav_path = "temp.wav"
     try:
+        # Save the audio buffer to a temporary WebM file
+        with wave.open(temp_webm_path, "wb") as webm_file:
+            webm_file.setnchannels(2)
+            webm_file.setsampwidth(2)
+            webm_file.setframerate(44100)
+            webm_file.writeframes(audio_buffer.getvalue())
+        
+        time.sleep(0.5)
+
+        # Convert WebM to WAV using ffmpeg
+        subprocess.run(['ffmpeg', '-i', temp_webm_path, temp_wav_path])
+
+        # Load the WAV file and perform speech-to-text processing
         recognizer = sr.Recognizer()
-        recognizer.pause_threshold = 0.8
-        print('hi')
-        with sr.AudioFile(temp_file_path) as source:
-            print('hello')
-            recognizer.adjust_for_ambient_noise(source)
+        with sr.AudioFile(temp_wav_path) as source:
             audio_data = recognizer.record(source)
             text = recognizer.recognize_google(audio_data)
-            print("Recognized text:", text)
-            emit('recognized_text', text)
+
+        # Emit the recognized text to the client
+        socketio.emit('recognized_text', text)
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
-        if os.path.exists(temp_file_path):  # Check if the temporary file exists
-            os.remove(temp_file_path)  # Remove the temporary file
+        # Clean up temporary files
+        try:
+            if os.path.exists(temp_webm_path):
+                os.remove(temp_webm_path)
+            if os.path.exists(temp_wav_path):
+                os.remove(temp_wav_path)
+        except Exception as e:
+            print(f"An error occurred while deleting temporary files: {e}")
 
 @app.route('/')
 def index():
