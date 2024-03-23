@@ -4,6 +4,7 @@ var isRecording = false;
 var chunks = []; // Array to store recorded audio chunks
 
 document.getElementById('recordButton').addEventListener('click', function () {
+    response_text = document.getElementById('textPlaceholder')
     if (!isRecording) {
         navigator.mediaDevices.getUserMedia({ audio: true })
             .then(stream => {
@@ -14,35 +15,36 @@ document.getElementById('recordButton').addEventListener('click', function () {
                 };
 
                 mediaRecorder.onstop = () => {
-                    // Create a new Blob with all the audio chunks
                     var audioBlob = new Blob(chunks, { type: 'audio/webm' });
 
-                    // Create a URL for the Blob
-                    var audioUrl = URL.createObjectURL(audioBlob);
+                    // Prepare FormData
+                    var formData = new FormData();
+                    formData.append('audio_data', audioBlob, 'recording.webm');
 
-                    // Create a new audio element
-                    var audioElement = document.createElement('audio');
-                    audioElement.src = audioUrl;
-                    audioElement.controls = true;
+                    // Send the audio file to the server using fetch API
+                    fetch('/upload_audio', {
+                        method: 'POST',
+                        body: formData,
+                    }).then(response => {
+                        return response.text();
+                    }).then(text => {
+                        console.log('Server response:', text);
+                        response_text.innerText = "You said: " + text;
+                    }).catch(error => {
+                        console.error('Error sending audio to server:', error);
+                    });
 
-                    // Append the audio element to the document
-                    document.body.appendChild(audioElement);
-
-                    // Reset chunks array for the next recording
                     chunks = [];
-
-                    // Reset the recording button text and flag
                     isRecording = false;
                     document.getElementById('recordButton').innerText = 'Start Recording';
 
-                    // Notify the server that recording has stopped
-                    socket.emit('recording_stopped');
+                    if (mediaRecorder.stream) {
+                        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                    }
                 };
 
-                // Start recording
                 mediaRecorder.start();
 
-                // Update button text and flag
                 isRecording = true;
                 document.getElementById('recordButton').innerText = 'Stop Recording';
             })
@@ -50,14 +52,8 @@ document.getElementById('recordButton').addEventListener('click', function () {
                 console.error('Error accessing microphone:', error);
             });
     } else {
-        // Stop recording
         mediaRecorder.stop();
-
-        // Reset the recording button text
         document.getElementById('recordButton').innerText = 'Start Recording';
-
-        // Notify the server that recording has stopped
-        socket.emit('recording_stopped');
     }
 });
 
