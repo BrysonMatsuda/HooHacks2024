@@ -1,5 +1,11 @@
+from flask import Flask, request, jsonify, render_template
+from flask_socketio import SocketIO, emit
 import speech_recognition as sr
 
+app = Flask(__name__)
+socketio = SocketIO(app)
+
+@socketio.on('speech_request')
 def speech_to_text():
     recognizer = sr.Recognizer()
     recognizer.pause_threshold = 0.8
@@ -18,4 +24,6 @@ def speech_to_text():
         except sr.RequestError as e:
             print(f"Could not request results from Google Web Speech API; {e}")
 
-speech_to_text()
+@app.route('/')
+def index():
+    return render_template('index.html')
