@@ -1,9 +1,27 @@
-let socket = io();
+var socket = io();
+var mediaRecorder;
+var isRecording = false;
 
-function startRecording() {
-    console.log("Start recording...");
-    socket.emit('speech_request', { audioData: "Your captured audio data here" });
-    socket.on('speech_response', function (data) {
-        console.log("Received text:", data.text);
-    });
-}
+document.getElementById('recordButton').addEventListener('click', function () {
+    if (!isRecording) {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.start();
+                isRecording = true;
+                document.getElementById('recordButton').innerText = 'Stop Recording';
+
+                mediaRecorder.ondataavailable = event => {
+                    if (isRecording) {
+                        event.data.arrayBuffer().then(buffer => socket.emit('audio_chunk', buffer));
+                    }
+                };
+            });
+    } else {
+        mediaRecorder.stop();
+        isRecording = false;
+        document.getElementById('recordButton').innerText = 'Start Recording';
+        socket.emit('recording_stopped');
+    }
+});
