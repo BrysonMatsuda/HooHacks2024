@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, render_template
 from flask_socketio import SocketIO, emit
 import speech_recognition as sr
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='../public', static_folder='../static')
 socketio = SocketIO(app)
 
 @socketio.on('speech_request')
@@ -27,3 +27,6 @@ def speech_to_text():
 @app.route('/')
 def index():
     return render_template('index.html')
+
+if __name__ == '__main__':
+    socketio.run(app)
