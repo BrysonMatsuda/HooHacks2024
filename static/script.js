@@ -5,6 +5,13 @@ var chunks = []; // Array to store recorded audio chunks
 
 document.getElementById('recordButton').addEventListener('click', function () {
     response_text = document.getElementById('textPlaceholder')
+    var dropdownItems = document.querySelectorAll('.dropdown-item');
+    var languageName = "English"
+    dropdownItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            languageName = this.cloneNode(true).textContent.trim();
+        });
+    });
     if (!isRecording) {
         navigator.mediaDevices.getUserMedia({ audio: true })
             .then(stream => {
@@ -38,6 +45,8 @@ document.getElementById('recordButton').addEventListener('click', function () {
                     isRecording = false;
                     document.getElementById('recordButton').innerText = 'Start Recording';
 
+                    socket.emit('translate', text, languageName)
+
                     if (mediaRecorder.stream) {
                         mediaRecorder.stream.getTracks().forEach(track => track.stop());
                     }
@@ -63,4 +72,9 @@ socket.on('connect_error', (error) => {
 
 socket.on('connect_timeout', () => {
     console.error('Socket connection timeout.');
+});
+
+socket.on('translated_text', function (translatedText) {
+    const translate_text = document.getElementById('translatedText');
+    translate_text.innerText += "\nTranslated: " + translatedText;
 });
