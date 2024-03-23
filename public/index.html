@@ -1,7 +1,11 @@
 <!DOCTYPE html>
 
 <head>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"
+        integrity="sha512-Rc62I2ufiYnXePxcCrfMy8sF+ZKgIkj1tgC3/sNzNfRg1SjXPPiGV7dswAltsROqlxApj8BBJND2Ojx5tF13VQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-K+ctZxhrurIy0u17nA1iu1vEPd9q9SiVX5V+Uns6a3k=" crossorigin="anonymous"></script>
     <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
     <title>Testing Document for Speech Recognition</title>
 </head>
@@ -12,4 +16,15 @@
         <script src="{{ url_for('static', filename='script.js') }}"></script>
     </div>
     <p id="textPlaceholder"></p>
+
+    <script>
+        var socket = io();
+        $('#startbutton').click(function () {
+            socket.emit("speech_request");
+        });
+
+        socket.on('speech_response', function (data) {
+            $('#output').text('You said: ' + data.text);
+        });
+    </script>
 </body>
