@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
 import speech_recognition as sr
 import io
@@ -7,6 +7,7 @@ import os
 import subprocess
 import wave
 import time
+from translate import Translator
 
 app = Flask(__name__, template_folder='../public', static_folder='../static')
 socketio = SocketIO(app)
@@ -28,7 +29,7 @@ def upload_audio():
     temp_webm_path = 'temp.webm'
     audio_file.save(temp_webm_path)
     temp_wav_path = "temp.wav"
-    
+
     try:
         subprocess.run(['ffmpeg', '-i', temp_webm_path, temp_wav_path], check=True)
 
@@ -45,6 +46,17 @@ def upload_audio():
     finally:
         os.remove(temp_webm_path)
         os.remove(temp_wav_path)
+
+@app.route('/translate', methods=['POST'])
+def translate_text():
+    data = request.get_json()
+    print(data)
+    data = request.get_json()
+    text = data['text']
+    target_language = data['languageName']
+    translator = Translator(to_lang=target_language)
+    translated_text = translator.translate(text)
+    return jsonify(translated_text=translated_text)
 
 if __name__ == '__main__':
     app.run(debug=True)

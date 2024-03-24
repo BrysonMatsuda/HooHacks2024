@@ -6,7 +6,7 @@ var chunks = []; // Array to store recorded audio chunks
 document.getElementById('recordButton').addEventListener('click', function () {
     response_text = document.getElementById('textPlaceholder')
     var dropdownItems = document.querySelectorAll('.dropdown-item');
-    var languageName = "English"
+    var languageName = "es"
     dropdownItems.forEach(function (item) {
         item.addEventListener('click', function () {
             languageName = this.cloneNode(true).textContent.trim();
@@ -37,6 +37,21 @@ document.getElementById('recordButton').addEventListener('click', function () {
                     }).then(text => {
                         console.log('Server response:', text);
                         response_text.innerText = "You said: " + text;
+                        fetch('/translate', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                text: text,
+                                languageName: languageName,
+                            }),
+                        }).then(response => response.json())
+                            .then(data => {
+                                document.getElementById('translatedText').innerText = "Translated: " + data.translated_text;
+                            }).catch(error => {
+                                console.error('Error translating text:', error);
+                            });
                     }).catch(error => {
                         console.error('Error sending audio to server:', error);
                     });
@@ -44,8 +59,6 @@ document.getElementById('recordButton').addEventListener('click', function () {
                     chunks = [];
                     isRecording = false;
                     document.getElementById('recordButton').innerText = 'Start Recording';
-
-                    socket.emit('translate', text, languageName)
 
                     if (mediaRecorder.stream) {
                         mediaRecorder.stream.getTracks().forEach(track => track.stop());
